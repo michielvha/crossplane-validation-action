@@ -19,31 +19,47 @@ curl -sL "https://raw.githubusercontent.com/crossplane/crossplane/main/install.s
 # The official installer places the binary in the current directory
 # Move it to a proper location in PATH
 if [ -f "./crossplane" ]; then
-    echo "Moving crossplane binary to /usr/local/bin..."
+    # Make sure it's executable
+    chmod +x ./crossplane
     
-    # Try to move to /usr/local/bin
-    if sudo mv ./crossplane /usr/local/bin/crossplane 2>/dev/null; then
+    echo "Installing crossplane binary to /usr/local/bin..."
+    
+    # Try to install to /usr/local/bin (preserves permissions)
+    if sudo install -m 755 ./crossplane /usr/local/bin/crossplane 2>/dev/null; then
         echo "✓ Installed to /usr/local/bin/crossplane"
+        rm -f ./crossplane
+        
+        # Ensure /usr/local/bin is in PATH
+        export PATH="/usr/local/bin:$PATH"
     else
         # If sudo fails, try user local bin
+        echo "Sudo not available, installing to $HOME/.local/bin..."
         mkdir -p "$HOME/.local/bin"
-        mv ./crossplane "$HOME/.local/bin/crossplane"
+        install -m 755 ./crossplane "$HOME/.local/bin/crossplane"
+        rm -f ./crossplane
         echo "✓ Installed to $HOME/.local/bin/crossplane"
         
-        # Add to PATH if not already there
-        if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
+        # Add to PATH for current shell
+        export PATH="$HOME/.local/bin:$PATH"
+        
+        # Add to GITHUB_PATH for future steps
+        if [ -n "$GITHUB_PATH" ]; then
             echo "$HOME/.local/bin" >> "$GITHUB_PATH"
-            export PATH="$HOME/.local/bin:$PATH"
         fi
     fi
 fi
 
 # Verify installation
-if crossplane --version &> /dev/null; then
+echo "Verifying installation..."
+if command -v crossplane &> /dev/null; then
     INSTALLED_VERSION=$(crossplane --version 2>&1)
     echo "✅ Crossplane CLI installed successfully!"
     echo "$INSTALLED_VERSION"
 else
-    echo "❌ Failed to verify Crossplane CLI installation"
+    echo "❌ Failed to find crossplane in PATH"
+    echo "PATH is: $PATH"
+    echo "Checking common locations..."
+    ls -la /usr/local/bin/crossplane 2>/dev/null || echo "Not in /usr/local/bin"
+    ls -la "$HOME/.local/bin/crossplane" 2>/dev/null || echo "Not in ~/.local/bin"
     exit 1
 fi
