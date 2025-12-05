@@ -4,9 +4,17 @@ set -e
 echo "Detecting changed Crossplane files..."
 
 # Get base and head refs from environment
-BASE_REF="${BASE_REF:-origin/main}"
+# For PRs: BASE_REF will be the target branch (e.g., main)
+# For pushes: BASE_REF will be empty, so we compare with previous commit
+BASE_REF="${BASE_REF:-}"
 HEAD_REF="${HEAD_REF:-HEAD}"
 WORKING_DIR="${WORKING_DIR:-.}"
+
+# If BASE_REF is empty (push event), use previous commit
+if [ -z "$BASE_REF" ]; then
+    echo "No base ref provided (push event), comparing with HEAD~1"
+    BASE_REF="HEAD~1"
+fi
 
 # Change to working directory
 cd "$WORKING_DIR"
@@ -17,22 +25,17 @@ declare -a COMPOSITION_FILES=()
 declare -a PROVIDER_FILES=()
 declare -a ALL_CROSSPLANE_FILES=()
 
-# Fetch the base ref to ensure we have it
-if [ -n "$BASE_REF" ]; then
+# Fetch the base ref if it's a remote branch
+if [[ "$BASE_REF" == origin/* ]]; then
     echo "Fetching base ref: $BASE_REF"
-    git fetch origin "$BASE_REF" --depth=1 2>/dev/null || true
+    git fetch origin "${BASE_REF#origin/}" --depth=1 2>/dev/null || true
 fi
 
 # Get list of changed files
 echo "Comparing $BASE_REF...$HEAD_REF"
 
-# Use different strategies based on whether we're in a PR or push event
-if [ -n "$BASE_REF" ] && [ -n "$HEAD_REF" ]; then
-    CHANGED_FILES=$(git diff --name-only "$BASE_REF"..."$HEAD_REF" 2>/dev/null || git diff --name-only "$BASE_REF" "$HEAD_REF" 2>/dev/null || git diff --name-only HEAD~1 HEAD)
-else
-    # Fallback to comparing with previous commit
-    CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || echo "")
-fi
+# Use git diff to find changed files
+CHANGED_FILES=$(git diff --name-only "$BASE_REF" "$HEAD_REF" 2>/dev/null || echo "")
 
 if [ -z "$CHANGED_FILES" ]; then
     echo "⚠ No changed files detected"
