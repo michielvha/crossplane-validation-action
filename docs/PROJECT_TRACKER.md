@@ -264,7 +264,12 @@ crossplane-build-check-action/
 - ✅ **Fix Applied**: Handle push events by defaulting to `HEAD~1` when `BASE_REF` is empty
   - PR events: Use provided base and head refs
   - Push events: Compare with previous commit (`HEAD~1`)
-- 🔄 **Ready for Re-test**: Change detection should now work for both PRs and pushes
+- 🐛 **Issue Found**: Validation command incorrect - requires `<extensions> <resources>` as separate args
+  - Was calling: `crossplane beta validate file.yaml`
+  - Should be: `crossplane beta validate extensions.yaml resources.yaml`
+- ✅ **Fix Applied**: Separate files into extensions (XRD/Provider) and resources (Composition)
+  - Extensions provide schemas, resources are validated against them
+- 🔄 **Ready for Re-test**: Validation should now work correctly
 
 ---
 

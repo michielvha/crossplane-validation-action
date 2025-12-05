@@ -62,39 +62,84 @@ declare -a ERROR_MESSAGES=()
 VALIDATION_OUTPUT=$(mktemp)
 trap "rm -f $VALIDATION_OUTPUT" EXIT
 
-# Function to validate a single file or group of files
-validate_files() {
-    local files=("$@")
-    
-    echo "Running: crossplane beta validate ${files[*]}"
-    
-    # Run validation and capture output
-    if crossplane beta validate --cache-dir="$CACHE_DIR" "${files[@]}" > "$VALIDATION_OUTPUT" 2>&1; then
-        # Validation succeeded
-        cat "$VALIDATION_OUTPUT"
-        return 0
-    else
-        # Validation failed
-        cat "$VALIDATION_OUTPUT"
-        return 1
+# Separate files into extensions (schemas) and resources
+# Extensions: XRDs, Providers, Configurations
+# Resources: Compositions, Claims, and other resources
+declare -a EXTENSION_FILES=()
+declare -a RESOURCE_FILES=()
+
+echo "Categorizing files..."
+for file in "${FILES_TO_VALIDATE[@]}"; do
+    if [ ! -f "$file" ]; then
+        echo "⚠ File not found: $file"
+        continue
     fi
-}
+    
+    # Determine file type by examining the kind field
+    KIND=$(grep -E "^kind:\s*" "$file" | head -n 1 | awk '{print $2}' | tr -d '\r\n' || echo "")
+    
+    case "$KIND" in
+        CompositeResourceDefinition|Provider|Configuration|Function)
+            echo "  Extension: $file (kind: $KIND)"
+            EXTENSION_FILES+=("$file")
+            ;;
+        Composition|CompositeResource|Claim|*)
+            echo "  Resource: $file (kind: $KIND)"
+            RESOURCE_FILES+=("$file")
+            ;;
+    esac
+done
 
-# Group files for validation
-# We need to validate XRDs and Compositions together when possible
-# For now, let's validate all files together to get the most accurate results
-
-echo "=" "==========================================="
-echo "Starting validation..."
-echo "==========================================="
+echo ""
+echo "Extensions: ${#EXTENSION_FILES[@]} file(s)"
+echo "Resources: ${#RESOURCE_FILES[@]} file(s)"
 echo ""
 
-# Validate all files together
-if validate_files "${FILES_TO_VALIDATE[@]}"; then
-    VALIDATION_SUCCEEDED=true
+# If we have no resources to validate, we're done
+if [ ${#RESOURCE_FILES[@]} -eq 0 ] && [ ${#EXTENSION_FILES[@]} -eq 0 ]; then
+    echo "⚠ No files to validate"
+elif [ ${#RESOURCE_FILES[@]} -eq 0 ]; then
+    echo "⚠ Only extensions found, nothing to validate against them"
+    SUCCESS_COUNT=${#EXTENSION_FILES[@]}
+    VALIDATED_FILES=("${EXTENSION_FILES[@]}")
 else
-    VALIDATION_SUCCEEDED=false
-fi
+    # Run validation
+    echo "==========================================="
+    echo "Starting validation..."
+    echo "==========================================="
+    echo ""
+    
+    # Build the command
+    # If we have extensions, use them; otherwise try to validate resources standalone
+    if [ ${#EXTENSION_FILES[@]} -gt 0 ]; then
+        # Join extension files with commas
+        EXTENSIONS=$(IFS=,; echo "${EXTENSION_FILES[*]}")
+        RESOURCES=$(IFS=,; echo "${RESOURCE_FILES[*]}")
+        
+        echo "Running: crossplane beta validate $EXTENSIONS $RESOURCES"
+        
+        if crossplane beta validate --cache-dir="$CACHE_DIR" "$EXTENSIONS" "$RESOURCES" > "$VALIDATION_OUTPUT" 2>&1; then
+            VALIDATION_SUCCEEDED=true
+        else
+            VALIDATION_SUCCEEDED=false
+        fi
+    else
+        # No extensions, try to validate resources alone (may need to download schemas)
+        RESOURCES=$(IFS=,; echo "${RESOURCE_FILES[*]}")
+        
+        echo "Running: crossplane beta validate $RESOURCES (standalone)"
+        echo "Note: This may fail if schemas are not available"
+        
+        if crossplane beta validate --cache-dir="$CACHE_DIR" "$RESOURCES" > "$VALIDATION_OUTPUT" 2>&1; then
+            VALIDATION_SUCCEEDED=true
+        else
+            VALIDATION_SUCCEEDED=false
+        fi
+    fi
+    
+    # Show output
+    cat "$VALIDATION_OUTPUT"
+    echo ""
 
 # Parse the validation output
 # The output format is typically:
