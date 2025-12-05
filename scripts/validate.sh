@@ -95,28 +95,74 @@ echo "Extensions: ${#EXTENSION_FILES[@]} file(s)"
 echo "Resources: ${#RESOURCE_FILES[@]} file(s)"
 echo ""
 
-# If we have resources but no extensions, search the repository for XRDs and Providers
+# If we have resources but no extensions, intelligently find dependencies
 if [ ${#RESOURCE_FILES[@]} -gt 0 ] && [ ${#EXTENSION_FILES[@]} -eq 0 ]; then
-    echo "No extensions in changed files, searching repository for XRDs and Providers..."
+    echo "Building dependency graph for changed resources..."
+    echo ""
     
-    # Find XRD and Provider files in the repository
-    while IFS= read -r -d '' file; do
-        if [ -f "$file" ]; then
-            KIND=$(grep -E "^kind:\s*" "$file" | head -n 1 | awk '{print $2}' | tr -d '\r\n' || echo "")
-            case "$KIND" in
-                CompositeResourceDefinition|Provider|Configuration)
-                    echo "  Found extension: $file (kind: $KIND)"
-                    EXTENSION_FILES+=("$file")
-                    ;;
-            esac
+    # Analyze each Composition to find what it needs
+    for resource_file in "${RESOURCE_FILES[@]}"; do
+        KIND=$(grep -E "^kind:\s*" "$resource_file" | head -n 1 | awk '{print $2}' | tr -d '\r\n' || echo "")
+        
+        if [ "$KIND" = "Composition" ]; then
+            echo "📋 Analyzing Composition: $resource_file"
+            
+            # 1. Find the XRD this Composition references (compositeTypeRef)
+            XRD_KIND=$(grep -A 3 "compositeTypeRef:" "$resource_file" | grep "kind:" | awk '{print $2}' | tr -d '\r\n' || echo "")
+            
+            if [ -n "$XRD_KIND" ]; then
+                echo "  → Needs XRD that defines: $XRD_KIND"
+                
+                # Search for matching XRD
+                while IFS= read -r -d '' xrd_file; do
+                    FILE_KIND=$(grep -E "^kind:\s*" "$xrd_file" | awk '{print $2}' | tr -d '\r\n')
+                    if [ "$FILE_KIND" = "CompositeResourceDefinition" ]; then
+                        # Check if this XRD defines our needed kind
+                        XRD_DEFINES=$(grep -A 10 "names:" "$xrd_file" | grep "kind:" | head -n 1 | awk '{print $2}' | tr -d '\r\n')
+                        if [ "$XRD_DEFINES" = "$XRD_KIND" ]; then
+                            echo "  ✓ Found XRD: $xrd_file"
+                            EXTENSION_FILES+=("$xrd_file")
+                            break
+                        fi
+                    fi
+                done < <(find . -type f \( -name "*.yaml" -o -name "*.yml" \) ! -path "./.crossplane/*" ! -path "./.git/*" -print0 2>/dev/null)
+            fi
+            
+            # 2. Find Providers for managed resources (based on apiVersion)
+            echo "  → Analyzing managed resources..."
+            API_VERSIONS=$(grep -E "apiVersion:\s+" "$resource_file" | grep -v "apiextensions.crossplane.io" | grep -v "pkg.crossplane.io" | awk '{print $2}' | sort -u)
+            
+            for api_version in $API_VERSIONS; do
+                # Extract provider hint (e.g., "ec2.aws.upbound.io/v1beta1" -> "aws")
+                if [[ "$api_version" =~ ([a-z0-9]+)\.(upbound\.io|crossplane\.io) ]]; then
+                    provider_hint="${BASH_REMATCH[1]}"
+                    echo "    • Uses $api_version (provider: $provider_hint)"
+                    
+                    # Find matching Provider
+                    while IFS= read -r -d '' prov_file; do
+                        FILE_KIND=$(grep -E "^kind:\s*" "$prov_file" | awk '{print $2}' | tr -d '\r\n')
+                        if [ "$FILE_KIND" = "Provider" ] || [ "$FILE_KIND" = "Configuration" ]; then
+                            PACKAGE=$(grep "package:" "$prov_file" | awk '{print $2}' | tr -d '\r\n')
+                            if [[ "$PACKAGE" =~ $provider_hint ]]; then
+                                echo "    ✓ Found Provider: $prov_file"
+                                if [[ ! " ${EXTENSION_FILES[@]} " =~ " ${prov_file} " ]]; then
+                                    EXTENSION_FILES+=("$prov_file")
+                                fi
+                                break
+                            fi
+                        fi
+                    done < <(find . -type f \( -name "*.yaml" -o -name "*.yml" \) ! -path "./.crossplane/*" ! -path "./.git/*" -print0 2>/dev/null)
+                fi
+            done
         fi
-    done < <(find . -type f \( -name "*.yaml" -o -name "*.yml" \) -print0 2>/dev/null)
+    done
     
-    echo "Found ${#EXTENSION_FILES[@]} extension(s) in repository"
+    echo ""
+    echo "✓ Found ${#EXTENSION_FILES[@]} required extension(s)"
     echo ""
 fi
 
-# If we have no resources to validate, we're done
+# Validation logic
 if [ ${#RESOURCE_FILES[@]} -eq 0 ] && [ ${#EXTENSION_FILES[@]} -eq 0 ]; then
     echo "⚠ No files to validate"
 elif [ ${#RESOURCE_FILES[@]} -eq 0 ]; then
@@ -128,11 +174,7 @@ elif [ ${#EXTENSION_FILES[@]} -eq 0 ]; then
     echo ""
     echo "To validate Compositions, you need:"
     echo "  1. An XRD (CompositeResourceDefinition) that defines the resource"
-    echo "  2. Or a Provider that provides the managed resource schemas"
-    echo ""
-    echo "Please add XRD or Provider files to your repository, for example:"
-    echo "  - examples/xrd.yaml"
-    echo "  - examples/provider.yaml"
+    echo "  2. A Provider that provides the managed resource schemas"
     echo ""
     FAILURE_COUNT=${#RESOURCE_FILES[@]}
     FAILED_FILES=("${RESOURCE_FILES[@]}")
@@ -143,7 +185,7 @@ else
     echo "==========================================="
     echo ""
     
-    # Join extension files with commas
+    # Join files with commas
     EXTENSIONS=$(IFS=,; echo "${EXTENSION_FILES[*]}")
     RESOURCES=$(IFS=,; echo "${RESOURCE_FILES[*]}")
     
@@ -156,41 +198,26 @@ else
         VALIDATION_SUCCEEDED=false
     fi
     
-    # Show output
     cat "$VALIDATION_OUTPUT"
     echo ""
 fi
 
-# Parse the validation output
-# The output format is typically:
-# [✓] or [x] followed by resource info
-# Example: [✓] apiextensions.crossplane.io/v1, Kind=CompositeResourceDefinition, my-xrd validated successfully
-# Example: [x] schema validation error ...
-
+# Parse validation output
 if [ -n "$VALIDATION_OUTPUT" ] && [ -f "$VALIDATION_OUTPUT" ]; then
     while IFS= read -r line; do
         if [[ "$line" =~ ^\[✓\] ]]; then
-            # Success line
             ((SUCCESS_COUNT++))
-            # Extract filename or resource name
             if [[ "$line" =~ Kind=([^,]+),\ ([^\ ]+) ]]; then
-                resource_name="${BASH_REMATCH[2]}"
-                VALIDATED_FILES+=("$resource_name")
+                VALIDATED_FILES+=("${BASH_REMATCH[2]}")
             fi
         elif [[ "$line" =~ ^\[x\] ]]; then
-            # Failure line
             ((FAILURE_COUNT++))
-            # Extract error message
             error_msg=$(echo "$line" | sed 's/^\[x\] //')
             ERROR_MESSAGES+=("$error_msg")
-            
-            # Try to extract filename
             if [[ "$line" =~ Kind=([^,]+),\ ([^\ ]+) ]]; then
-                resource_name="${BASH_REMATCH[2]}"
-                FAILED_FILES+=("$resource_name")
+                FAILED_FILES+=("${BASH_REMATCH[2]}")
             fi
         elif [[ "$line" =~ "missing schemas" ]]; then
-            # Extract missing schema count
             if [[ "$line" =~ ([0-9]+)\ missing\ schemas ]]; then
                 MISSING_SCHEMA_COUNT="${BASH_REMATCH[1]}"
             fi
@@ -198,7 +225,7 @@ if [ -n "$VALIDATION_OUTPUT" ] && [ -f "$VALIDATION_OUTPUT" ]; then
     done < "$VALIDATION_OUTPUT"
 fi
 
-# If we have files but no success/failure counts, fall back to simple counting
+# Fallback counting
 if [ $SUCCESS_COUNT -eq 0 ] && [ $FAILURE_COUNT -eq 0 ]; then
     if [ "$VALIDATION_SUCCEEDED" = true ]; then
         SUCCESS_COUNT=${#FILES_TO_VALIDATE[@]}
@@ -219,7 +246,7 @@ echo "❌ Failed: $FAILURE_COUNT"
 echo "⚠ Missing schemas: $MISSING_SCHEMA_COUNT"
 echo ""
 
-# Output detailed errors if any
+# Output errors
 if [ $FAILURE_COUNT -gt 0 ]; then
     echo "Validation Errors:"
     for error in "${ERROR_MESSAGES[@]}"; do
@@ -228,18 +255,16 @@ if [ $FAILURE_COUNT -gt 0 ]; then
     echo ""
 fi
 
-# Create JSON output for validated files
+# JSON output
 validated_files_json="["
 for i in "${!VALIDATED_FILES[@]}"; do
-    if [ $i -gt 0 ]; then
-        validated_files_json+=","
-    fi
+    [ $i -gt 0 ] && validated_files_json+=","
     escaped="${VALIDATED_FILES[$i]//\"/\\\"}"
     validated_files_json+="\"$escaped\""
 done
 validated_files_json+="]"
 
-# Create validation result summary
+# Result summary
 if [ $FAILURE_COUNT -eq 0 ]; then
     VALIDATION_RESULT="✅ All $SUCCESS_COUNT file(s) validated successfully"
 else
@@ -252,7 +277,7 @@ echo "validation-result=$VALIDATION_RESULT" >> "$GITHUB_OUTPUT"
 echo "success-count=$SUCCESS_COUNT" >> "$GITHUB_OUTPUT"
 echo "failure-count=$FAILURE_COUNT" >> "$GITHUB_OUTPUT"
 
-# Create GitHub Actions summary
+# GitHub Actions summary
 {
     echo "## Crossplane Validation Results"
     echo ""
@@ -283,7 +308,7 @@ echo "failure-count=$FAILURE_COUNT" >> "$GITHUB_OUTPUT"
     fi
 } >> "$GITHUB_STEP_SUMMARY"
 
-# Exit with error if validation failed and fail-on-error is true
+# Exit based on fail-on-error
 if [ $FAILURE_COUNT -gt 0 ] && [ "$FAIL_ON_ERROR" = "true" ]; then
     echo ""
     echo "❌ Validation failed with $FAILURE_COUNT error(s)"
