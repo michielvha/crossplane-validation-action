@@ -32,6 +32,21 @@ FILES_TO_VALIDATE=("${FILES_TO_VALIDATE[@]//^$/}")
 
 if [ ${#FILES_TO_VALIDATE[@]} -eq 0 ] || [ -z "${FILES_TO_VALIDATE[0]}" ]; then
     echo "⚠ No files to validate"
+    
+    # Write summary
+    {
+        echo "## Crossplane Validation Results"
+        echo ""
+        echo "| Metric | Count |"
+        echo "|--------|-------|"
+        echo "| Total Files | 0 |"
+        echo "| ✅ Passed | 0 |"
+        echo "| ❌ Failed | 0 |"
+        echo "| ⚠ Missing Schemas | 0 |"
+        echo ""
+        echo "ℹ️ No Crossplane files changed in this commit."
+    } >> "$GITHUB_STEP_SUMMARY"
+    
     echo "validated-files=[]" >> "$GITHUB_OUTPUT"
     echo "validation-result=No Crossplane files to validate" >> "$GITHUB_OUTPUT"
     echo "success-count=0" >> "$GITHUB_OUTPUT"
