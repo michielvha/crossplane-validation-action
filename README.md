@@ -64,7 +64,9 @@ That's it! The action will automatically:
 
 ## Inputs
 
-| Input | Description | Required | Default |
+![inputs](docs/images/inputs.png)
+
+<!-- | Input | Description | Required | Default |
 |-------|-------------|----------|---------|
 | `base-ref` | Base branch for diff comparison | No | `${{ github.base_ref }}` |
 | `head-ref` | Head branch for diff comparison | No | `${{ github.head_ref }}` |
@@ -72,17 +74,19 @@ That's it! The action will automatically:
 | `cache-dir` | Directory for caching provider schemas | No | `.crossplane/cache` |
 | `clean-cache` | Force clean cache before validation | No | `false` |
 | `file-patterns` | Custom glob patterns for files | No | _(auto-detect)_ |
-| `working-directory` | Working directory for the action | No | `.` |
+| `working-directory` | Working directory for the action | No | `.` | -->
 
 ## Outputs
 
-| Output | Description |
+![outputs](docs/images/outputs.png)
+
+<!-- | Output | Description |
 |--------|-------------|
 | `validated-files` | JSON array of validated files |
 | `validation-result` | Summary of validation results |
 | `changed-files-count` | Number of changed Crossplane files |
 | `success-count` | Number of files that passed validation |
-| `failure-count` | Number of files that failed validation |
+| `failure-count` | Number of files that failed validation | -->
 
 
 
