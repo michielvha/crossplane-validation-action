@@ -225,24 +225,8 @@ Or add `.crossplane/` to your `.gitignore`:
 - Running on push to main after merge
 - Using `pull_request_target` (with caution)
 
-## 🤝 Contributing
-
-Contributions welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md).
-
-## 📄 License
-
-MIT License - see [LICENSE](LICENSE) for details.
-
 ## 🔗 Related Resources
 
 - [Crossplane Documentation](https://docs.crossplane.io/)
 - [Crossplane CLI Reference](https://docs.crossplane.io/latest/cli/command-reference/#beta-validate)
 - [Composition Testing Patterns](https://blog.upbound.io/composition-testing-patterns-rendering)
-
-## ⭐ Show Your Support
-
-If this action helps you catch bugs early, give it a ⭐!
-
----
-
-**Made with ❤️ for the Crossplane community**

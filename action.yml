@@ -1,6 +1,6 @@
-name: 'Crossplane Build Check'
+name: 'Crossplane Validation Action'
 description: 'Validate Crossplane XRD and Composition files using the Crossplane CLI with automatic change detection'
-author: 'Mike'
+author: 'Michiel VH'
 
 branding:
   icon: 'check-circle'
@@ -32,7 +32,6 @@ inputs:
     required: false
     default: 'false'
   
-
   file-patterns:
     description: 'Custom glob patterns for finding Crossplane files (comma-separated). Leave empty for auto-detection.'
     required: false
