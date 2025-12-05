@@ -49,6 +49,9 @@ if [ -f "./crossplane" ]; then
     fi
 fi
 
+# Refresh bash's command hash table
+hash -r
+
 # Verify installation
 echo "Verifying installation..."
 if command -v crossplane &> /dev/null; then
