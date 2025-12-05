@@ -140,6 +140,7 @@ else
     # Show output
     cat "$VALIDATION_OUTPUT"
     echo ""
+fi
 
 # Parse the validation output
 # The output format is typically:
@@ -147,34 +148,36 @@ else
 # Example: [✓] apiextensions.crossplane.io/v1, Kind=CompositeResourceDefinition, my-xrd validated successfully
 # Example: [x] schema validation error ...
 
-while IFS= read -r line; do
-    if [[ "$line" =~ ^\[✓\] ]]; then
-        # Success line
-        ((SUCCESS_COUNT++))
-        # Extract filename or resource name
-        if [[ "$line" =~ Kind=([^,]+),\ ([^\ ]+) ]]; then
-            resource_name="${BASH_REMATCH[2]}"
-            VALIDATED_FILES+=("$resource_name")
+if [ -n "$VALIDATION_OUTPUT" ] && [ -f "$VALIDATION_OUTPUT" ]; then
+    while IFS= read -r line; do
+        if [[ "$line" =~ ^\[✓\] ]]; then
+            # Success line
+            ((SUCCESS_COUNT++))
+            # Extract filename or resource name
+            if [[ "$line" =~ Kind=([^,]+),\ ([^\ ]+) ]]; then
+                resource_name="${BASH_REMATCH[2]}"
+                VALIDATED_FILES+=("$resource_name")
+            fi
+        elif [[ "$line" =~ ^\[x\] ]]; then
+            # Failure line
+            ((FAILURE_COUNT++))
+            # Extract error message
+            error_msg=$(echo "$line" | sed 's/^\[x\] //')
+            ERROR_MESSAGES+=("$error_msg")
+            
+            # Try to extract filename
+            if [[ "$line" =~ Kind=([^,]+),\ ([^\ ]+) ]]; then
+                resource_name="${BASH_REMATCH[2]}"
+                FAILED_FILES+=("$resource_name")
+            fi
+        elif [[ "$line" =~ "missing schemas" ]]; then
+            # Extract missing schema count
+            if [[ "$line" =~ ([0-9]+)\ missing\ schemas ]]; then
+                MISSING_SCHEMA_COUNT="${BASH_REMATCH[1]}"
+            fi
         fi
-    elif [[ "$line" =~ ^\[x\] ]]; then
-        # Failure line
-        ((FAILURE_COUNT++))
-        # Extract error message
-        error_msg=$(echo "$line" | sed 's/^\[x\] //')
-        ERROR_MESSAGES+=("$error_msg")
-        
-        # Try to extract filename
-        if [[ "$line" =~ Kind=([^,]+),\ ([^\ ]+) ]]; then
-            resource_name="${BASH_REMATCH[2]}"
-            FAILED_FILES+=("$resource_name")
-        fi
-    elif [[ "$line" =~ "missing schemas" ]]; then
-        # Extract missing schema count
-        if [[ "$line" =~ ([0-9]+)\ missing\ schemas ]]; then
-            MISSING_SCHEMA_COUNT="${BASH_REMATCH[1]}"
-        fi
-    fi
-done < "$VALIDATION_OUTPUT"
+    done < "$VALIDATION_OUTPUT"
+fi
 
 # If we have files but no success/failure counts, fall back to simple counting
 if [ $SUCCESS_COUNT -eq 0 ] && [ $FAILURE_COUNT -eq 0 ]; then

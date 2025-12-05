@@ -269,7 +269,9 @@ crossplane-build-check-action/
   - Should be: `crossplane beta validate extensions.yaml resources.yaml`
 - ✅ **Fix Applied**: Separate files into extensions (XRD/Provider) and resources (Composition)
   - Extensions provide schemas, resources are validated against them
-- 🔄 **Ready for Re-test**: Validation should now work correctly
+- � **Issue Found**: Syntax error in validate.sh - missing `fi` statement
+- ✅ **Fix Applied**: Added missing `fi` to close else block
+- �🔄 **Ready for Re-test**: Validation should now work correctly
 
 ---
 
