@@ -37,4 +37,4 @@ branches:
     source-branches:
       - main
 assembly-versioning-scheme: MajorMinorPatch
-assembly-informational-format: v'{SemVer}'
+assembly-informational-format: '{SemVer}'

@@ -27,21 +27,19 @@ jobs:
         uses: michielvha/gitversion-tag-action@main
         with:
           configFilePath: gitversion.yml
-          # prefix: 'v'
+          prefix: 'v'
       
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.gitversion.outputs.semVer }}
-          name: Release ${{ steps.gitversion.outputs.semVer }}
+          tag_name: v${{ steps.gitversion.outputs.semVer }}
+          name: Release v${{ steps.gitversion.outputs.semVer }}
           body: |
             ## What's Changed
             
             This release includes updates to the Crossplane Validation Action.
             
-            ### Version Information
-            - Version: ${{ steps.gitversion.outputs.semVer }}
-            - SHA: ${{ github.sha }}
+            Use SHA: ${{ github.sha }} to ensure immutability.
             
             See the full commit history for details.
           draft: false
