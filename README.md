@@ -228,6 +228,7 @@ Or add `.crossplane/` to your `.gitignore`:
 - Running on push to main after merge
 - Using `pull_request_target` (with caution)
 
+<!--
 ## 🤝 Contributing
 
 This action uses automated versioning and publishing:
@@ -248,7 +249,7 @@ To contribute:
 2. Create a feature branch
 3. Make your changes with conventional commit messages
 4. Submit a pull request to `main`
-5. Once merged, the release will be automated if action files changed
+5. Once merged, the release will be automated if action files changed -->
 
 ## 🔗 Related Resources
 
