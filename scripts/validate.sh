@@ -27,7 +27,10 @@ fi
 # Read files into array
 mapfile -t FILES_TO_VALIDATE < "$FILES_TO_VALIDATE_FILE"
 
-if [ ${#FILES_TO_VALIDATE[@]} -eq 0 ]; then
+# Filter out empty strings from the array
+FILES_TO_VALIDATE=("${FILES_TO_VALIDATE[@]//^$/}")
+
+if [ ${#FILES_TO_VALIDATE[@]} -eq 0 ] || [ -z "${FILES_TO_VALIDATE[0]}" ]; then
     echo "⚠ No files to validate"
     echo "validated-files=[]" >> "$GITHUB_OUTPUT"
     echo "validation-result=No Crossplane files to validate" >> "$GITHUB_OUTPUT"
@@ -165,6 +168,12 @@ fi
 # Validation logic
 if [ ${#RESOURCE_FILES[@]} -eq 0 ] && [ ${#EXTENSION_FILES[@]} -eq 0 ]; then
     echo "⚠ No files to validate"
+    echo "validated-files=[]" >> "$GITHUB_OUTPUT"
+    echo "validation-result=No Crossplane files to validate" >> "$GITHUB_OUTPUT"
+    echo "success-count=0" >> "$GITHUB_OUTPUT"
+    echo "failure-count=0" >> "$GITHUB_OUTPUT"
+    echo "✅ Validation complete!"
+    exit 0
 elif [ ${#RESOURCE_FILES[@]} -eq 0 ]; then
     echo "⚠ Only extensions found, nothing to validate against them"
     SUCCESS_COUNT=${#EXTENSION_FILES[@]}
