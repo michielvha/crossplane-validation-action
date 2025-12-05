@@ -1,4 +1,4 @@
-name: Test Crossplane Build Check Action
+name: Test Crossplane Validation Action
 
 on:
   pull_request:
@@ -22,7 +22,7 @@ jobs:
         with:
           fetch-depth: 0
       
-      - name: Run Crossplane Build Check (Valid Files)
+      - name: Run Crossplane Validation (Valid Files)
         id: test-valid
         uses: ./
         with:

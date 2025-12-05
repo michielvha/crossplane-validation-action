@@ -1,10 +1,14 @@
-# Crossplane Validation Action
+![Crossplane Validation Action](docs/images/header.png)
 
-[![Test Action](https://github.com/yourusername/crossplane-build-check-action/actions/workflows/test.yml/badge.svg)](https://github.com/yourusername/crossplane-build-check-action/actions/workflows/test.yml)
+[![Test Action](https://github.com/michielvha/crossplane-validation-action/actions/workflows/test.yml/badge.svg)](https://github.com/michielvha/crossplane-validation-action/actions/workflows/test.yml)
 
 A GitHub Action that automatically validates Crossplane XRD (CompositeResourceDefinition) and Composition files in pull requests using the Crossplane CLI's `beta validate` command.
 
-## ✨ Features
+## Features
+
+![Features](docs/images/features.png)
+
+<!-- ## ✨ Features
 
 - 🔍 **Smart Change Detection** - Only validates files that changed in your PR
 - ⚡ **Fast Validation** - Uses Crossplane CLI's offline validation (no cluster required)
@@ -49,12 +53,40 @@ That's it! The action will automatically:
 3. Validate the changed files against their schemas
 4. Report any validation errors
 
+ -->
+
+
+## Usage
+
 > [!TIP]
-> Check out the [examples/workflows/](examples/workflows/) directory for more usage examples including advanced configurations and multi-environment setups.
+> Check out the [examples/workflows/](examples/workflows/) directory for usage examples including advanced configurations and multi-environment setups.
 
-## 📖 Usage
 
-### Basic Usage
+## Inputs
+
+| Input | Description | Required | Default |
+|-------|-------------|----------|---------|
+| `base-ref` | Base branch for diff comparison | No | `${{ github.base_ref }}` |
+| `head-ref` | Head branch for diff comparison | No | `${{ github.head_ref }}` |
+| `fail-on-error` | Fail workflow on validation errors | No | `true` |
+| `cache-dir` | Directory for caching provider schemas | No | `.crossplane/cache` |
+| `clean-cache` | Force clean cache before validation | No | `false` |
+| `file-patterns` | Custom glob patterns for files | No | _(auto-detect)_ |
+| `working-directory` | Working directory for the action | No | `.` |
+
+## Outputs
+
+| Output | Description |
+|--------|-------------|
+| `validated-files` | JSON array of validated files |
+| `validation-result` | Summary of validation results |
+| `changed-files-count` | Number of changed Crossplane files |
+| `success-count` | Number of files that passed validation |
+| `failure-count` | Number of files that failed validation |
+
+
+
+<!-- ### Basic Usage
 
 ```yaml
 - uses: michielvha/crossplane-validation-action@v1
@@ -79,7 +111,7 @@ That's it! The action will automatically:
     
     # Custom working directory
     working-directory: ./infrastructure
-```
+``` 
 
 ### Using Outputs
 
@@ -95,30 +127,10 @@ That's it! The action will automatically:
     echo "Failed: ${{ steps.validate.outputs.failure-count }}"
     echo "Result: ${{ steps.validate.outputs.validation-result }}"
 ```
+-->
 
-## 🔧 Inputs
 
-| Input | Description | Required | Default |
-|-------|-------------|----------|---------|
-| `base-ref` | Base branch for diff comparison | No | `${{ github.base_ref }}` |
-| `head-ref` | Head branch for diff comparison | No | `${{ github.head_ref }}` |
-| `fail-on-error` | Fail workflow on validation errors | No | `true` |
-| `cache-dir` | Directory for caching provider schemas | No | `.crossplane/cache` |
-| `clean-cache` | Force clean cache before validation | No | `false` |
-| `file-patterns` | Custom glob patterns for files | No | _(auto-detect)_ |
-| `working-directory` | Working directory for the action | No | `.` |
-
-## 📤 Outputs
-
-| Output | Description |
-|--------|-------------|
-| `validated-files` | JSON array of validated files |
-| `validation-result` | Summary of validation results |
-| `changed-files-count` | Number of changed Crossplane files |
-| `success-count` | Number of files that passed validation |
-| `failure-count` | Number of files that failed validation |
-
-## 🎯 What Gets Validated?
+## What Gets Validated?
 
 The action automatically detects and validates:
 
@@ -131,7 +143,7 @@ Files are detected by:
 2. Parsing each file to check the `kind` field
 3. Only validating Crossplane-related resources
 
-## 💡 How It Works
+## How It Works
 
 ```mermaid
 graph LR
@@ -152,7 +164,7 @@ The action uses the Crossplane CLI's `beta validate` command which:
 - Downloads and caches provider CRD schemas
 - Works completely offline (no cluster required)
 
-## 🔍 Example Validation Output
+## Example Validation Output
 
 When validation succeeds:
 ```
@@ -173,7 +185,7 @@ Validation Errors:
 - Invalid patch type: InvalidPatchType
 ```
 
-## 📁 Repository Structure
+<!-- ## Repository Structure
 
 If you have Crossplane files in a specific directory:
 
@@ -181,9 +193,9 @@ If you have Crossplane files in a specific directory:
 - uses: michielvha/crossplane-validation-action@v1
   with:
     working-directory: ./crossplane-configs
-```
+``` -->
 
-## ⚙️ Performance & Caching
+## Performance & Caching
 
 The action caches provider schemas in `.crossplane/cache` by default. This means:
 - **First run**: Downloads provider schemas (~10-30s depending on providers)
@@ -199,7 +211,7 @@ Or add `.crossplane/` to your `.gitignore`:
 ```gitignore
 .crossplane/
 ```
-
+<!--
 ## 🐛 Troubleshooting
 
 ### No files detected
@@ -228,7 +240,7 @@ Or add `.crossplane/` to your `.gitignore`:
 - Running on push to main after merge
 - Using `pull_request_target` (with caution)
 
-<!--
+
 ## 🤝 Contributing
 
 This action uses automated versioning and publishing:
@@ -251,7 +263,7 @@ To contribute:
 4. Submit a pull request to `main`
 5. Once merged, the release will be automated if action files changed -->
 
-## 🔗 Related Resources
+## Related Resources
 
 - [Crossplane Documentation](https://docs.crossplane.io/)
 - [Crossplane CLI Reference](https://docs.crossplane.io/latest/cli/command-reference/#beta-validate)
