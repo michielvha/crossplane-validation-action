@@ -68,9 +68,6 @@ That's it! The action will automatically:
     # Don't fail the workflow on validation errors, just report them
     fail-on-error: false
     
-    # Use a specific version of Crossplane CLI
-    crossplane-version: v1.14.0
-    
     # Custom cache directory
     cache-dir: .crossplane/cache
     
@@ -105,7 +102,6 @@ That's it! The action will automatically:
 | `fail-on-error` | Fail workflow on validation errors | No | `true` |
 | `cache-dir` | Directory for caching provider schemas | No | `.crossplane/cache` |
 | `clean-cache` | Force clean cache before validation | No | `false` |
-| `crossplane-version` | Crossplane CLI version to install | No | `latest` |
 | `file-patterns` | Custom glob patterns for files | No | _(auto-detect)_ |
 | `working-directory` | Working directory for the action | No | `.` |
 

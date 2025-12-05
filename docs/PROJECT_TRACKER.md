@@ -253,6 +253,16 @@ crossplane-build-check-action/
 - Project is ready for real-world testing
 - Next: Test in actual repository with Crossplane configurations
 
+### 2025-12-05 (Testing Phase)
+- 🐛 **Issue Found**: Custom CLI installer was failing to download from releases.crossplane.io
+- ✅ **Fix Applied**: Simplified `setup-crossplane.sh` to use official Crossplane installer
+  - Now uses: `curl -sL "https://raw.githubusercontent.com/crossplane/crossplane/main/install.sh" | sh`
+  - Removed all custom version detection logic
+  - Always installs latest stable version (simpler and more reliable)
+  - Removed `crossplane-version` input parameter (no longer needed)
+- ✅ **Change Detection Verified**: Working perfectly - detected Provider file change
+- 🔄 **Ready for Re-test**: Simplified installation should now work reliably
+
 ---
 
 ## 🚀 Next Steps

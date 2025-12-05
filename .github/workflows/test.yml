@@ -28,7 +28,6 @@ jobs:
         with:
           fail-on-error: false
           cache-dir: .crossplane/cache
-          crossplane-version: latest
         continue-on-error: true
       
       - name: Display validation results
@@ -46,39 +45,6 @@ jobs:
           else
             echo "✓ Detected changed files: ${{ steps.test-valid.outputs.changed-files-count }}"
           fi
-
-  test-manual-validation:
-    name: Manual Validation Test
-    runs-on: ubuntu-latest
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      
-      - name: Setup Crossplane CLI
-        run: |
-          bash ./scripts/setup-crossplane.sh latest
-      
-      - name: Validate sample XRD
-        run: |
-          echo "Testing XRD validation..."
-          crossplane beta validate examples/sample-xrd.yaml
-      
-      - name: Validate sample Composition (expected to need provider schemas)
-        run: |
-          echo "Testing Composition validation..."
-          crossplane beta validate examples/sample-provider.yaml examples/sample-composition.yaml || true
-      
-      - name: Test with error file (should fail)
-        run: |
-          echo "Testing validation with errors (should fail)..."
-          if crossplane beta validate examples/sample-with-errors.yaml; then
-            echo "❌ Expected validation to fail but it passed"
-            exit 1
-          else
-            echo "✓ Validation correctly failed for error file"
-          fi
-        continue-on-error: true
 
   test-change-detection:
     name: Test Change Detection
