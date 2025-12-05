@@ -1,0 +1,71 @@
+name: Advanced Crossplane Validation
+
+on:
+  pull_request:
+    paths:
+      - '**.yaml'
+      - '**.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - '**.yaml'
+      - '**.yml'
+
+jobs:
+  validate:
+    name: Validate with Advanced Options
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      
+      - name: Validate Crossplane Files
+        id: validate
+        uses: michielvha/crossplane-validation-action@main
+        with:
+          # Don't fail the workflow, just report errors
+          fail-on-error: false
+          
+          # Custom cache directory
+          cache-dir: .crossplane/cache
+          
+          # Force clean the cache (useful for troubleshooting)
+          clean-cache: false
+          
+          # Custom working directory if Crossplane files are in a subdirectory
+          working-directory: .
+      
+      - name: Report Validation Results
+        if: always()
+        run: |
+          echo "### Crossplane Validation Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Changed Files:** ${{ steps.validate.outputs.changed-files-count }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Passed:** ${{ steps.validate.outputs.success-count }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Failed:** ${{ steps.validate.outputs.failure-count }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Result:** ${{ steps.validate.outputs.validation-result }}" >> $GITHUB_STEP_SUMMARY
+      
+      - name: Create comment on PR
+        if: github.event_name == 'pull_request' && steps.validate.outputs.failure-count != '0'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const output = `#### Crossplane Validation Failed ❌
+            
+            - Changed files: ${{ steps.validate.outputs.changed-files-count }}
+            - Passed: ${{ steps.validate.outputs.success-count }}
+            - Failed: ${{ steps.validate.outputs.failure-count }}
+            
+            Please review the validation errors in the workflow logs.`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            })

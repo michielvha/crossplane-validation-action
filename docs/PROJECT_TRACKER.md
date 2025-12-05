@@ -11,7 +11,7 @@
 **Name**: Crossplane Validation Action  
 **Author**: Michiel VH  
 **Purpose**: Automated validation of Crossplane XRD and Composition files in PRs using intelligent dependency resolution  
-**Repository**: `crossplane-build-check-action`
+**Repository**: `crossplane-validation-action`
 
 ---
 

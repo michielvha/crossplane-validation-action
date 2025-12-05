@@ -1,4 +1,4 @@
-# Crossplane Build Check Action
+# Crossplane Validation Action
 
 [![Test Action](https://github.com/yourusername/crossplane-build-check-action/actions/workflows/test.yml/badge.svg)](https://github.com/yourusername/crossplane-build-check-action/actions/workflows/test.yml)
 
@@ -38,7 +38,7 @@ jobs:
           fetch-depth: 0  # Required for proper diff detection
       
       - name: Validate Crossplane Files
-        uses: yourusername/crossplane-build-check-action@v1
+        uses: michielvha/crossplane-validation-action@v1
         with:
           fail-on-error: true
 ```
@@ -49,18 +49,21 @@ That's it! The action will automatically:
 3. Validate the changed files against their schemas
 4. Report any validation errors
 
+> [!TIP]
+> Check out the [examples/workflows/](examples/workflows/) directory for more usage examples including advanced configurations and multi-environment setups.
+
 ## 📖 Usage
 
 ### Basic Usage
 
 ```yaml
-- uses: yourusername/crossplane-build-check-action@v1
+- uses: michielvha/crossplane-validation-action@v1
 ```
 
 ### Advanced Usage
 
 ```yaml
-- uses: yourusername/crossplane-build-check-action@v1
+- uses: michielvha/crossplane-validation-action@v1
   with:
     # Base branch for comparison (default: target branch of PR)
     base-ref: main
@@ -83,7 +86,7 @@ That's it! The action will automatically:
 ```yaml
 - name: Validate Crossplane Files
   id: validate
-  uses: yourusername/crossplane-build-check-action@v1
+  uses: michielvha/crossplane-validation-action@v1
 
 - name: Use validation results
   run: |
@@ -175,7 +178,7 @@ Validation Errors:
 If you have Crossplane files in a specific directory:
 
 ```yaml
-- uses: yourusername/crossplane-build-check-action@v1
+- uses: michielvha/crossplane-validation-action@v1
   with:
     working-directory: ./crossplane-configs
 ```
@@ -224,6 +227,28 @@ Or add `.crossplane/` to your `.gitignore`:
 **Solution**: This is expected for security. Fork PRs run with read-only tokens. Consider:
 - Running on push to main after merge
 - Using `pull_request_target` (with caution)
+
+## 🤝 Contributing
+
+This action uses automated versioning and publishing:
+
+- **Versioning**: Uses [GitVersion](https://gitversion.net/) with the GitHubFlow workflow
+  - Commits are analyzed using conventional commit messages
+  - Version bumps: `BREAKING CHANGE` (major), `feat:` (minor), `fix:/perf:/refactor:` (patch)
+  - No bump: `chore:/docs:/style:/test:/ci:`
+
+- **Auto-Publishing**: When changes are pushed to `main` that affect action behavior:
+  - Changes to `scripts/**/*.sh` or `action.yml` trigger the publish workflow
+  - GitVersion automatically calculates and tags the next version
+  - A GitHub release is created and published to the Marketplace
+  - Documentation-only changes do not trigger releases
+
+To contribute:
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes with conventional commit messages
+4. Submit a pull request to `main`
+5. Once merged, the release will be automated if action files changed
 
 ## 🔗 Related Resources
 

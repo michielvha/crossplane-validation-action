@@ -1,0 +1,23 @@
+name: Validate Crossplane
+
+on:
+  pull_request:
+    paths:
+      - '**.yaml'
+      - '**.yml'
+
+jobs:
+  validate:
+    name: Validate Crossplane Files
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Required for proper diff detection
+      
+      - name: Validate Crossplane Files
+        uses: michielvha/crossplane-validation-action@main
+        with:
+          fail-on-error: true

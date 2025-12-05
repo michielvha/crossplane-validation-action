@@ -1,0 +1,49 @@
+name: Publish to Marketplace
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'scripts/**/*.sh'
+      - 'action.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Create Release and Publish
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      
+      - name: Tag the repo
+        id: gitversion
+        uses: michielvha/gitversion-tag-action@main
+        with:
+          configFilePath: gitversion.yml
+      
+      - name: Create GitHub Release
+        uses: actions/create-release@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.gitversion.outputs.semVer }}
+          release_name: Release ${{ steps.gitversion.outputs.semVer }}
+          body: |
+            ## What's Changed
+            
+            This release includes updates to the Crossplane Validation Action.
+            
+            ### Version Information
+            - Version: ${{ steps.gitversion.outputs.semVer }}
+            - SHA: ${{ github.sha }}
+            
+            See the full commit history for details.
+          draft: false
+          prerelease: false

@@ -1,0 +1,60 @@
+name: Multi-Environment Validation
+
+on:
+  pull_request:
+    paths:
+      - 'crossplane/**/*.yaml'
+      - 'crossplane/**/*.yml'
+
+jobs:
+  validate-environments:
+    name: Validate ${{ matrix.environment }}
+    runs-on: ubuntu-latest
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        environment:
+          - dev
+          - staging
+          - prod
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      
+      - name: Validate ${{ matrix.environment }} Crossplane Files
+        id: validate
+        uses: michielvha/crossplane-validation-action@main
+        with:
+          working-directory: crossplane/${{ matrix.environment }}
+          fail-on-error: true
+          cache-dir: .crossplane/cache/${{ matrix.environment }}
+      
+      - name: Report Results for ${{ matrix.environment }}
+        if: always()
+        run: |
+          echo "### ${{ matrix.environment }} Validation Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Changed Files:** ${{ steps.validate.outputs.changed-files-count }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Passed:** ${{ steps.validate.outputs.success-count }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Failed:** ${{ steps.validate.outputs.failure-count }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+  
+  summary:
+    name: Validation Summary
+    runs-on: ubuntu-latest
+    needs: validate-environments
+    if: always()
+    
+    steps:
+      - name: Check validation status
+        run: |
+          if [ "${{ needs.validate-environments.result }}" == "success" ]; then
+            echo "✅ All environments validated successfully"
+          else
+            echo "❌ Some environments failed validation"
+            exit 1
+          fi
