@@ -42,6 +42,7 @@ inputs:
     required: false
     default: '.'
 
+
 outputs:
   validated-files:
     description: 'JSON array of files that were validated'
