@@ -201,7 +201,13 @@ else
     echo "Running: crossplane beta validate \"$EXTENSIONS\" \"$RESOURCES\""
     echo ""
     
-    if crossplane beta validate --cache-dir="$CACHE_DIR" "$EXTENSIONS" "$RESOURCES" > "$VALIDATION_OUTPUT" 2>&1; then
+    # Run validation and capture exit code (don't exit on failure due to set -e)
+    set +e
+    crossplane beta validate --cache-dir="$CACHE_DIR" "$EXTENSIONS" "$RESOURCES" > "$VALIDATION_OUTPUT" 2>&1
+    VALIDATION_EXIT_CODE=$?
+    set -e
+    
+    if [ $VALIDATION_EXIT_CODE -eq 0 ]; then
         VALIDATION_SUCCEEDED=true
     else
         VALIDATION_SUCCEEDED=false
