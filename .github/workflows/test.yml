@@ -26,7 +26,7 @@ jobs:
         id: test-valid
         uses: ./
         with:
-          fail-on-error: false
+          fail-on-error: false  # Show errors in summary without failing workflow
           cache-dir: .crossplane/cache
         continue-on-error: true
       
