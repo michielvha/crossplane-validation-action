@@ -1,0 +1,22 @@
+# Crossplane cache directory
+.crossplane/
+
+# GitHub Actions temporary files
+/tmp/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+
+# Temporary test files
+/test-output/

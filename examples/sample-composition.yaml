@@ -1,0 +1,65 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: network-aws
+  labels:
+    provider: aws
+    network-type: basic
+spec:
+  compositeTypeRef:
+    apiVersion: example.crossplane.io/v1alpha1
+    kind: XNetwork
+  
+  resources:
+  - name: vpc
+    base:
+      apiVersion: ec2.aws.upbound.io/v1beta1
+      kind: VPC
+      spec:
+        forProvider:
+          enableDnsHostnames: true
+          enableDnsSupport: true
+          tags:
+            Name: crossplane-vpc
+    patches:
+    - type: FromCompositeFieldPath
+      fromFieldPath: spec.region
+      toFieldPath: spec.forProvider.region
+    - type: FromCompositeFieldPath
+      fromFieldPath: spec.cidrBlock
+      toFieldPath: spec.forProvider.cidrBlock
+    - type: FromCompositeFieldPath
+      fromFieldPath: spec.enableDnsHostnames
+      toFieldPath: spec.forProvider.enableDnsHostnames
+    - type: FromCompositeFieldPath
+      fromFieldPath: spec.enableDnsSupport
+      toFieldPath: spec.forProvider.enableDnsSupport
+    - type: FromCompositeFieldPath
+      fromFieldPath: spec.tags
+      toFieldPath: spec.forProvider.tags
+      policy:
+        mergeOptions:
+          appendSlice: false
+          keepMapValues: true
+    - type: ToCompositeFieldPath
+      fromFieldPath: status.atProvider.id
+      toFieldPath: status.vpcId
+    connectionDetails:
+    - type: FromFieldPath
+      name: vpc-id
+      fromFieldPath: status.atProvider.id
+  
+  - name: internet-gateway
+    base:
+      apiVersion: ec2.aws.upbound.io/v1beta1
+      kind: InternetGateway
+      spec:
+        forProvider:
+          vpcIdSelector:
+            matchControllerRef: true
+          tags:
+            Name: crossplane-igw
+    patches:
+    - type: FromCompositeFieldPath
+      fromFieldPath: spec.region
+      toFieldPath: spec.forProvider.region

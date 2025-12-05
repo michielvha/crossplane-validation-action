@@ -1,0 +1,106 @@
+name: 'Crossplane Build Check'
+description: 'Validate Crossplane XRD and Composition files using the Crossplane CLI with automatic change detection'
+author: 'Mike'
+
+branding:
+  icon: 'check-circle'
+  color: 'blue'
+
+inputs:
+  base-ref:
+    description: 'Base branch for diff comparison (for PRs, this is the target branch)'
+    required: false
+    default: ${{ github.base_ref }}
+  
+  head-ref:
+    description: 'Head branch for diff comparison (for PRs, this is the source branch)'
+    required: false
+    default: ${{ github.head_ref }}
+  
+  fail-on-error:
+    description: 'Whether to fail the workflow if validation errors are found'
+    required: false
+    default: 'true'
+  
+  cache-dir:
+    description: 'Directory for caching Crossplane provider schemas'
+    required: false
+    default: '.crossplane/cache'
+  
+  clean-cache:
+    description: 'Force clean the cache before validation'
+    required: false
+    default: 'false'
+  
+  crossplane-version:
+    description: 'Version of Crossplane CLI to install (e.g., v1.14.0 or latest)'
+    required: false
+    default: 'latest'
+  
+  file-patterns:
+    description: 'Custom glob patterns for finding Crossplane files (comma-separated). Leave empty for auto-detection.'
+    required: false
+    default: ''
+  
+  working-directory:
+    description: 'Working directory to run the action in'
+    required: false
+    default: '.'
+
+outputs:
+  validated-files:
+    description: 'JSON array of files that were validated'
+    value: ${{ steps.validate.outputs.validated-files }}
+  
+  validation-result:
+    description: 'Summary of validation results'
+    value: ${{ steps.validate.outputs.validation-result }}
+  
+  changed-files-count:
+    description: 'Number of changed Crossplane files detected'
+    value: ${{ steps.detect.outputs.changed-files-count }}
+  
+  success-count:
+    description: 'Number of files that passed validation'
+    value: ${{ steps.validate.outputs.success-count }}
+  
+  failure-count:
+    description: 'Number of files that failed validation'
+    value: ${{ steps.validate.outputs.failure-count }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Crossplane CLI
+      id: setup
+      shell: bash
+      run: |
+        echo "::group::Installing Crossplane CLI"
+        bash ${{ github.action_path }}/scripts/setup-crossplane.sh "${{ inputs.crossplane-version }}"
+        echo "::endgroup::"
+    
+    - name: Detect Changed Files
+      id: detect
+      shell: bash
+      env:
+        BASE_REF: ${{ inputs.base-ref }}
+        HEAD_REF: ${{ inputs.head-ref }}
+        FILE_PATTERNS: ${{ inputs.file-patterns }}
+        WORKING_DIR: ${{ inputs.working-directory }}
+      run: |
+        echo "::group::Detecting Changed Crossplane Files"
+        bash ${{ github.action_path }}/scripts/detect-changes.sh
+        echo "::endgroup::"
+    
+    - name: Validate Crossplane Files
+      id: validate
+      shell: bash
+      env:
+        CACHE_DIR: ${{ inputs.cache-dir }}
+        CLEAN_CACHE: ${{ inputs.clean-cache }}
+        FAIL_ON_ERROR: ${{ inputs.fail-on-error }}
+        WORKING_DIR: ${{ inputs.working-directory }}
+      run: |
+        echo "::group::Validating Crossplane Files"
+        bash ${{ github.action_path }}/scripts/validate.sh
+        echo "::endgroup::"

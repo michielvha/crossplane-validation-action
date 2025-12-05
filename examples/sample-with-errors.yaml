@@ -1,0 +1,35 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: network-with-errors
+  labels:
+    provider: aws
+spec:
+  compositeTypeRef:
+    apiVersion: example.crossplane.io/v1alpha1
+    kind: XNetwork
+  
+  resources:
+  - name: vpc
+    base:
+      apiVersion: ec2.aws.upbound.io/v1beta1
+      kind: VPC
+      spec:
+        forProvider:
+          enableDnsHostnames: true
+          enableDnsSupport: true
+          # This is an unknown field that should cause validation to fail
+          unknownField: "this-should-fail"
+          tags:
+            Name: crossplane-vpc
+    patches:
+    - type: FromCompositeFieldPath
+      fromFieldPath: spec.region
+      toFieldPath: spec.forProvider.region
+    - type: FromCompositeFieldPath
+      fromFieldPath: spec.cidrBlock
+      toFieldPath: spec.forProvider.cidrBlock
+    # This patch has an invalid type
+    - type: InvalidPatchType
+      fromFieldPath: spec.invalidField
+      toFieldPath: spec.forProvider.invalidField

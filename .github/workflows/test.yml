@@ -1,0 +1,108 @@
+name: Test Crossplane Build Check Action
+
+on:
+  pull_request:
+    paths:
+      - 'examples/**'
+      - 'scripts/**'
+      - 'action.yml'
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  test-validation:
+    name: Test Action with Sample Files
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Run Crossplane Build Check (Valid Files)
+        id: test-valid
+        uses: ./
+        with:
+          fail-on-error: false
+          cache-dir: .crossplane/cache
+          crossplane-version: latest
+        continue-on-error: true
+      
+      - name: Display validation results
+        run: |
+          echo "Changed files count: ${{ steps.test-valid.outputs.changed-files-count }}"
+          echo "Success count: ${{ steps.test-valid.outputs.success-count }}"
+          echo "Failure count: ${{ steps.test-valid.outputs.failure-count }}"
+          echo "Validation result: ${{ steps.test-valid.outputs.validation-result }}"
+          echo "Validated files: ${{ steps.test-valid.outputs.validated-files }}"
+      
+      - name: Verify outputs
+        run: |
+          if [ "${{ steps.test-valid.outputs.changed-files-count }}" -eq "0" ]; then
+            echo "✓ No files changed (expected in workflow_dispatch)"
+          else
+            echo "✓ Detected changed files: ${{ steps.test-valid.outputs.changed-files-count }}"
+          fi
+
+  test-manual-validation:
+    name: Manual Validation Test
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Crossplane CLI
+        run: |
+          bash ./scripts/setup-crossplane.sh latest
+      
+      - name: Validate sample XRD
+        run: |
+          echo "Testing XRD validation..."
+          crossplane beta validate examples/sample-xrd.yaml
+      
+      - name: Validate sample Composition (expected to need provider schemas)
+        run: |
+          echo "Testing Composition validation..."
+          crossplane beta validate examples/sample-provider.yaml examples/sample-composition.yaml || true
+      
+      - name: Test with error file (should fail)
+        run: |
+          echo "Testing validation with errors (should fail)..."
+          if crossplane beta validate examples/sample-with-errors.yaml; then
+            echo "❌ Expected validation to fail but it passed"
+            exit 1
+          else
+            echo "✓ Validation correctly failed for error file"
+          fi
+        continue-on-error: true
+
+  test-change-detection:
+    name: Test Change Detection
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Test detect-changes script
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref || 'HEAD~1' }}
+          HEAD_REF: HEAD
+        run: |
+          # Create GITHUB_OUTPUT file for testing
+          export GITHUB_OUTPUT=$(mktemp)
+          
+          echo "Testing change detection script..."
+          bash ./scripts/detect-changes.sh
+          
+          echo "Detection output:"
+          cat "$GITHUB_OUTPUT"
+          
+          # Clean up
+          rm -f "$GITHUB_OUTPUT"
