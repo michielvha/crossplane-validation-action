@@ -27,6 +27,7 @@ jobs:
         uses: michielvha/gitversion-tag-action@main
         with:
           configFilePath: gitversion.yml
+          prefix: 'v'
       
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
