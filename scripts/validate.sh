@@ -232,6 +232,9 @@ else
     echo ""
 fi
 
+# Disable set -e for the rest of the script to ensure we always write outputs
+set +e
+
 # Parse validation output
 if [ -n "$VALIDATION_OUTPUT" ] && [ -f "$VALIDATION_OUTPUT" ]; then
     while IFS= read -r line; do
