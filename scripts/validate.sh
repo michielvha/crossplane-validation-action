@@ -168,6 +168,21 @@ fi
 # Validation logic
 if [ ${#RESOURCE_FILES[@]} -eq 0 ] && [ ${#EXTENSION_FILES[@]} -eq 0 ]; then
     echo "⚠ No files to validate"
+    
+    # Still write summary
+    {
+        echo "## Crossplane Validation Results"
+        echo ""
+        echo "| Metric | Count |"
+        echo "|--------|-------|"
+        echo "| Total Files | 0 |"
+        echo "| ✅ Passed | 0 |"
+        echo "| ❌ Failed | 0 |"
+        echo "| ⚠ Missing Schemas | 0 |"
+        echo ""
+        echo "ℹ️ No Crossplane files changed in this commit."
+    } >> "$GITHUB_STEP_SUMMARY"
+    
     echo "validated-files=[]" >> "$GITHUB_OUTPUT"
     echo "validation-result=No Crossplane files to validate" >> "$GITHUB_OUTPUT"
     echo "success-count=0" >> "$GITHUB_OUTPUT"
@@ -293,6 +308,13 @@ echo "success-count=$SUCCESS_COUNT" >> "$GITHUB_OUTPUT"
 echo "failure-count=$FAILURE_COUNT" >> "$GITHUB_OUTPUT"
 
 # GitHub Actions summary
+if [ -z "$GITHUB_STEP_SUMMARY" ]; then
+    echo "⚠ Warning: GITHUB_STEP_SUMMARY not set, cannot write summary"
+    GITHUB_STEP_SUMMARY="/dev/null"
+fi
+
+echo "Writing summary to: $GITHUB_STEP_SUMMARY"
+
 {
     echo "## Crossplane Validation Results"
     echo ""
@@ -322,6 +344,8 @@ echo "failure-count=$FAILURE_COUNT" >> "$GITHUB_OUTPUT"
         echo ""
     fi
 } >> "$GITHUB_STEP_SUMMARY"
+
+echo "✓ Summary written successfully"
 
 # Exit based on fail-on-error
 if [ $FAILURE_COUNT -gt 0 ] && [ "$FAIL_ON_ERROR" = "true" ]; then
