@@ -95,6 +95,27 @@ echo "Extensions: ${#EXTENSION_FILES[@]} file(s)"
 echo "Resources: ${#RESOURCE_FILES[@]} file(s)"
 echo ""
 
+# If we have resources but no extensions, search the repository for XRDs and Providers
+if [ ${#RESOURCE_FILES[@]} -gt 0 ] && [ ${#EXTENSION_FILES[@]} -eq 0 ]; then
+    echo "No extensions in changed files, searching repository for XRDs and Providers..."
+    
+    # Find XRD and Provider files in the repository
+    while IFS= read -r -d '' file; do
+        if [ -f "$file" ]; then
+            KIND=$(grep -E "^kind:\s*" "$file" | head -n 1 | awk '{print $2}' | tr -d '\r\n' || echo "")
+            case "$KIND" in
+                CompositeResourceDefinition|Provider|Configuration)
+                    echo "  Found extension: $file (kind: $KIND)"
+                    EXTENSION_FILES+=("$file")
+                    ;;
+            esac
+        fi
+    done < <(find . -type f \( -name "*.yaml" -o -name "*.yml" \) -print0 2>/dev/null)
+    
+    echo "Found ${#EXTENSION_FILES[@]} extension(s) in repository"
+    echo ""
+fi
+
 # If we have no resources to validate, we're done
 if [ ${#RESOURCE_FILES[@]} -eq 0 ] && [ ${#EXTENSION_FILES[@]} -eq 0 ]; then
     echo "⚠ No files to validate"
@@ -102,6 +123,19 @@ elif [ ${#RESOURCE_FILES[@]} -eq 0 ]; then
     echo "⚠ Only extensions found, nothing to validate against them"
     SUCCESS_COUNT=${#EXTENSION_FILES[@]}
     VALIDATED_FILES=("${EXTENSION_FILES[@]}")
+elif [ ${#EXTENSION_FILES[@]} -eq 0 ]; then
+    echo "❌ No XRDs or Providers found to validate Compositions against"
+    echo ""
+    echo "To validate Compositions, you need:"
+    echo "  1. An XRD (CompositeResourceDefinition) that defines the resource"
+    echo "  2. Or a Provider that provides the managed resource schemas"
+    echo ""
+    echo "Please add XRD or Provider files to your repository, for example:"
+    echo "  - examples/xrd.yaml"
+    echo "  - examples/provider.yaml"
+    echo ""
+    FAILURE_COUNT=${#RESOURCE_FILES[@]}
+    FAILED_FILES=("${RESOURCE_FILES[@]}")
 else
     # Run validation
     echo "==========================================="
@@ -109,32 +143,17 @@ else
     echo "==========================================="
     echo ""
     
-    # Build the command
-    # If we have extensions, use them; otherwise try to validate resources standalone
-    if [ ${#EXTENSION_FILES[@]} -gt 0 ]; then
-        # Join extension files with commas
-        EXTENSIONS=$(IFS=,; echo "${EXTENSION_FILES[*]}")
-        RESOURCES=$(IFS=,; echo "${RESOURCE_FILES[*]}")
-        
-        echo "Running: crossplane beta validate $EXTENSIONS $RESOURCES"
-        
-        if crossplane beta validate --cache-dir="$CACHE_DIR" "$EXTENSIONS" "$RESOURCES" > "$VALIDATION_OUTPUT" 2>&1; then
-            VALIDATION_SUCCEEDED=true
-        else
-            VALIDATION_SUCCEEDED=false
-        fi
+    # Join extension files with commas
+    EXTENSIONS=$(IFS=,; echo "${EXTENSION_FILES[*]}")
+    RESOURCES=$(IFS=,; echo "${RESOURCE_FILES[*]}")
+    
+    echo "Running: crossplane beta validate \"$EXTENSIONS\" \"$RESOURCES\""
+    echo ""
+    
+    if crossplane beta validate --cache-dir="$CACHE_DIR" "$EXTENSIONS" "$RESOURCES" > "$VALIDATION_OUTPUT" 2>&1; then
+        VALIDATION_SUCCEEDED=true
     else
-        # No extensions, try to validate resources alone (may need to download schemas)
-        RESOURCES=$(IFS=,; echo "${RESOURCE_FILES[*]}")
-        
-        echo "Running: crossplane beta validate $RESOURCES (standalone)"
-        echo "Note: This may fail if schemas are not available"
-        
-        if crossplane beta validate --cache-dir="$CACHE_DIR" "$RESOURCES" > "$VALIDATION_OUTPUT" 2>&1; then
-            VALIDATION_SUCCEEDED=true
-        else
-            VALIDATION_SUCCEEDED=false
-        fi
+        VALIDATION_SUCCEEDED=false
     fi
     
     # Show output
