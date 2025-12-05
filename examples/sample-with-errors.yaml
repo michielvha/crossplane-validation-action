@@ -33,4 +33,3 @@ spec:
     - type: InvalidPatchType
       fromFieldPath: spec.invalidField
       toFieldPath: spec.forProvider.invalidField
-
