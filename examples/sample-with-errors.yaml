@@ -8,7 +8,6 @@ spec:
   compositeTypeRef:
     apiVersion: example.crossplane.io/v1alpha1
     kind: XNetwork
-  
   resources:
   - name: vpc
     base:
